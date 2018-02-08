@@ -6,6 +6,7 @@ import collections
 from spatula import Page, Spatula
 from pupa.scrape import Scraper, Bill, VoteEvent
 from .common import SESSION_SITE_IDS
+from . import logging
 
 tz = pytz.timezone('America/New_York')
 
@@ -153,7 +154,7 @@ class BillDetailPage(Page, Spatula):
 
             # budget bills in VA are searchable but no full text available
             if '+men+' in link:
-                self.warning('not adding budget version, bill text not available')
+                logging.warning('not adding budget version, bill text not available')
             else:
                 # VA duplicates reprinted bills, lets keep the original name
                 self.obj.add_version_link(desc, link, date=date,
@@ -167,7 +168,13 @@ class BillDetailPage(Page, Spatula):
             vote = None
 
             date, action = ali.text_content().split(u' \xa0')
-            actor, action = action.split(': ', 1)
+            assert False
+            try:
+                actor, action = action.split(': ', 1)
+            except ValueError:
+                assert any([action.startswith('{}:'.format(x)) for x in self.actor_map.keys()]), \
+                        "Unparseable action text found: {}".format(action)
+                logging.warning("Skipping apparently-null action: {}".format(action))
 
             # Bill history entries purely in parentheses tend to be
             # notes and not actions, so we'll skip them.
